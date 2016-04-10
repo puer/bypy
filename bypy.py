@@ -2394,6 +2394,15 @@ get information of the given path (dir / file) at Baidu Yun.
 			start_time = time.time()
 			f.seek(initial_offset, os.SEEK_SET)
 			while i < pieces:
+				if paused:
+					self.pd("Uploading was paused")
+					while paused:
+						time.sleep(10)
+					self.pd("Uploading was resumed")
+					# reset the progress bar
+					start_time = time.time()
+					initial_offset = f.tell()
+
 				self.__current_slice = f.read(slice)
 				m = hashlib.md5()
 				m.update(self.__current_slice)
@@ -4218,6 +4227,8 @@ def setuphandlers():
 		setsighandler(signal.SIGPIPE, signal.SIG_IGN)
 		setsighandler(signal.SIGQUIT, sighandler)
 		setsighandler(signal.SIGSYS, sighandler)
+		signal.signal(signal.SIGUSR1, pause_upload)
+		signal.signal(signal.SIGUSR2, resume_upload)
 	setsighandler(signal.SIGABRT, sighandler)
 	setsighandler(signal.SIGFPE, sighandler)
 	setsighandler(signal.SIGILL, sighandler)
@@ -4313,6 +4324,20 @@ def clean_prog_files(cleanlevel, verbose, tokenpath = TokenFilePath):
 			result = subresult
 
 	return result
+
+
+paused=False
+def pause_upload(signum, frame):
+	global paused
+	paused=True
+	pr("Paused signal recieved")
+	return
+
+def resume_upload(signum, frame):
+	global paused
+	paused=False
+	pr("Resume signal recieved")
+	return
 
 def main(argv=None): # IGNORE:C0111
 	''' Main Entry '''
